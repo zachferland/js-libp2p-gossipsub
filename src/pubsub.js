@@ -292,10 +292,10 @@ class BasicPubSub extends Pubsub {
         return peer.sendSubscriptions(topics)
       }
       const onConnection = () => {
-        peer.removeListener('connection', onConnection)
+        // peer.removeListener('connection', onConnection)
         sendSubscriptionsOnceReady(peer)
       }
-      peer.on('connection', onConnection)
+      peer.once('connection', onConnection)
       peer.once('close', () => peer.removeListener('connection', onConnection))
     }
 
@@ -338,10 +338,10 @@ class BasicPubSub extends Pubsub {
         return peer.sendUnsubscriptions(topics)
       }
       const onConnection = () => {
-        peer.removeListener('connection', onConnection)
+        // peer.removeListener('connection', onConnection)
         sendUnsubscriptionsOnceReady(peer)
       }
-      peer.on('connection', onConnection)
+      peer.once('connection', onConnection)
       peer.once('close', () => peer.removeListener('connection', onConnection))
     }
 
