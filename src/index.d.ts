@@ -3,7 +3,7 @@
 
 /// <reference types="node"/>
 
-import PeerId = require('peer-id');
+import PeerInfo = require('peer-info');
 
 export interface Registrar {
     handle: Function;
@@ -29,7 +29,7 @@ import * as Events from "events";
 interface GossipSub extends Events.EventEmitter {}
 
 declare class GossipSub  {
-    constructor(peerId: PeerId, registrar: Registrar, options: Options);
+    constructor(peerInfo: PeerInfo, registrar: Registrar, options: Options);
     publish(topic: string, data: Buffer): Promise<void>;
     start(): Promise<void>;
     stop(): Promise<void>;

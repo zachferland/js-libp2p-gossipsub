@@ -14,7 +14,7 @@ message RPC {
     optional bytes from = 1;
     optional bytes data = 2;
     optional bytes seqno = 3;
-    repeated string topicIDs = 4; 
+    repeated string topicIDs = 4;
     optional bytes signature = 5;
     optional bytes key = 6;
   }
@@ -32,7 +32,7 @@ message RPC {
   }
 
   message ControlIWant {
-    repeated string messageIDs = 1;  
+    repeated string messageIDs = 1;
   }
 
   message ControlGraft {

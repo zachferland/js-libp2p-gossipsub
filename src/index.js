@@ -2,7 +2,7 @@
 
 const { utils } = require('libp2p-pubsub')
 
-const PeerId = require('peer-id')
+const PeerInfo = require('peer-info')
 
 const BasicPubsub = require('./pubsub')
 const { MessageCache } = require('./messageCache')
@@ -13,7 +13,7 @@ const Heartbeat = require('./heartbeat')
 
 class GossipSub extends BasicPubsub {
   /**
-   * @param {PeerId} peerId instance of the peer's PeerId
+   * @param {PeerInfo} peerInfo instance of the peer's PeerInfo
    * @param {Object} registrar
    * @param {function} registrar.handle
    * @param {function} registrar.register
@@ -26,15 +26,15 @@ class GossipSub extends BasicPubsub {
    * @param {Object} [options.messageCache] override the default MessageCache
    * @constructor
    */
-  constructor (peerId, registrar, options = {}) {
-    if (!PeerId.isPeerId(peerId)) {
-      throw new Error('peerId must be an instance of `peer-id`')
+  constructor (peerInfo, registrar, options = {}) {
+    if (!PeerInfo.isPeerInfo(peerInfo)) {
+      throw new Error('peer info must be an instance of `peer-info`')
     }
 
     super({
       debugName: 'libp2p:gossipsub',
       multicodec: constants.GossipSubID,
-      peerId,
+      peerInfo,
       registrar,
       options
     })
@@ -95,7 +95,7 @@ class GossipSub extends BasicPubsub {
    * Removes a peer from the router
    * @override
    * @param {Peer} peer
-   * @returns {Peer}
+   * @returns {PeerInfo}
    */
   _removePeer (peer) {
     super._removePeer(peer)
@@ -162,13 +162,13 @@ class GossipSub extends BasicPubsub {
 
     // Emit to floodsub peers
     this.peers.forEach((peer) => {
-      if (peer.protocols.includes(constants.FloodSubID) &&
-        peer.id.toB58String() !== msg.from &&
+      if (peer.info.protocols.has(constants.FloodSubID) &&
+        peer.info.id.toB58String() !== msg.from &&
         utils.anyMatch(peer.topics, topics) &&
         peer.isWritable
       ) {
         peer.sendMessages(utils.normalizeOutRpcMessages([msg]))
-        this.log('publish msg on topics - floodsub', topics, peer.id.toB58String())
+        this.log('publish msg on topics - floodsub', topics, peer.info.id.toB58String())
       }
     })
 
@@ -178,11 +178,11 @@ class GossipSub extends BasicPubsub {
         return
       }
       this.mesh.get(topic).forEach((peer) => {
-        if (!peer.isWritable || peer.id.toB58String() === msg.from) {
+        if (!peer.isWritable || peer.info.id.toB58String() === msg.from) {
           return
         }
         peer.sendMessages(utils.normalizeOutRpcMessages([msg]))
-        this.log('publish msg on topic - meshsub', topic, peer.id.toB58String())
+        this.log('publish msg on topic - meshsub', topic, peer.info.id.toB58String())
       })
     })
   }
@@ -213,7 +213,7 @@ class GossipSub extends BasicPubsub {
       return
     }
 
-    this.log('IHAVE: Asking for %d messages from %s', iwant.size, peer.id.toB58String())
+    this.log('IHAVE: Asking for %d messages from %s', iwant.size, peer.info.id.toB58String())
 
     return {
       messageIDs: Array.from(iwant)
@@ -244,7 +244,7 @@ class GossipSub extends BasicPubsub {
       return
     }
 
-    this.log('IWANT: Sending %d messages to %s', ihave.size, peer.id.toB58String())
+    this.log('IWANT: Sending %d messages to %s', ihave.size, peer.info.id.toB58String())
 
     return Array.from(ihave.values())
   }
@@ -263,7 +263,7 @@ class GossipSub extends BasicPubsub {
       if (!peers) {
         prune.push(topicID)
       } else {
-        this.log('GRAFT: Add mesh link from %s in %s', peer.id.toB58String(), topicID)
+        this.log('GRAFT: Add mesh link from %s in %s', peer.info.id.toB58String(), topicID)
         peers.add(peer)
         peer.topics.add(topicID)
         this.mesh.set(topicID, peers)
@@ -293,7 +293,7 @@ class GossipSub extends BasicPubsub {
     prune.forEach(({ topicID }) => {
       const peers = this.mesh.get(topicID)
       if (peers) {
-        this.log('PRUNE: Remove mesh link to %s in %s', peer.id.toB58String(), topicID)
+        this.log('PRUNE: Remove mesh link to %s in %s', peer.info.id.toB58String(), topicID)
         peers.delete(peer)
         peer.topics.delete(topicID)
       }
@@ -352,7 +352,7 @@ class GossipSub extends BasicPubsub {
         this.mesh.set(topic, peers)
       }
       this.mesh.get(topic).forEach((peer) => {
-        this.log('JOIN: Add mesh link to %s in %s', peer.id.toB58String(), topic)
+        this.log('JOIN: Add mesh link to %s in %s', peer.info.id.toB58String(), topic)
         this._sendGraft(peer, topic)
       })
     })
@@ -373,7 +373,7 @@ class GossipSub extends BasicPubsub {
       const meshPeers = this.mesh.get(topic)
       if (meshPeers) {
         meshPeers.forEach((peer) => {
-          this.log('LEAVE: Remove mesh link to %s in %s', peer.id.toB58String(), topic)
+          this.log('LEAVE: Remove mesh link to %s in %s', peer.info.id.toB58String(), topic)
           this._sendPrune(peer, topic)
         })
         this.mesh.delete(topic)
@@ -405,7 +405,7 @@ class GossipSub extends BasicPubsub {
 
         // floodsub peers
         peersInTopic.forEach((peer) => {
-          if (peer.protocols.includes(constants.FloodSubID)) {
+          if (peer.info.protocols.has(constants.FloodSubID)) {
             tosend.add(peer)
           }
         })
@@ -436,7 +436,7 @@ class GossipSub extends BasicPubsub {
       })
       // Publish messages to peers
       tosend.forEach((peer) => {
-        if (peer.id.toB58String() === msgObj.from) {
+        if (peer.info.id.toB58String() === msgObj.from) {
           return
         }
         this._sendRpc(peer, { msgs: [msgObj] })
@@ -591,7 +591,7 @@ class GossipSub extends BasicPubsub {
    * @returns {void}
    */
   _pushGossip (peer, controlIHaveMsgs) {
-    this.log('Add gossip to %s', peer.id.toB58String())
+    this.log('Add gossip to %s', peer.info.id.toB58String())
     const gossip = this.gossip.get(peer) || []
     this.gossip.set(peer, gossip.concat(controlIHaveMsgs))
   }
