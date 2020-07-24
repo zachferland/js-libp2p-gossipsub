@@ -296,7 +296,7 @@ class BasicPubSub extends Pubsub {
         sendSubscriptionsOnceReady(peer)
       }
       peer.once('connection', onConnection)
-      peer.once('close', () => peer.removeListener('connection', onConnection))
+      // peer.once('close', () => peer.removeListener('connection', onConnection))
     }
 
     this.join(newTopics)
@@ -342,7 +342,7 @@ class BasicPubSub extends Pubsub {
         sendUnsubscriptionsOnceReady(peer)
       }
       peer.once('connection', onConnection)
-      peer.once('close', () => peer.removeListener('connection', onConnection))
+      // peer.once('close', () => peer.removeListener('connection', onConnection))
     }
 
     this.leave(unTopics)
