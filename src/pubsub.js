@@ -283,21 +283,43 @@ class BasicPubSub extends Pubsub {
       this.subscriptions.add(topic)
     })
 
-    // Broadcast SUBSCRIBE to all peers
-    this.peers.forEach((peer) => sendSubscriptionsOnceReady(peer))
-
-    // make sure that Gossipsub is already mounted
-    function sendSubscriptionsOnceReady (peer) {
+    const sendSubs = (peer) => {
       if (peer && peer.isWritable) {
         return peer.sendSubscriptions(topics)
       }
-      const onConnection = () => {
-        // peer.removeListener('connection', onConnection)
-        sendSubscriptionsOnceReady(peer)
-      }
-      peer.once('connection', onConnection)
-      // peer.once('close', () => peer.removeListener('connection', onConnection))
     }
+
+    // Broadcast SUBSCRIBE to all peers
+    this.peers.forEach((peer) => {
+      if (peer && peer.isWritable) {
+        console.log('send subscribe first')
+        return peer.sendSubscriptions(topics)
+      } else {
+        peer.once('connection', (peer1) => {
+          console.log('connection done')
+          if (peer1 && peer1.isWritable) {
+            return peer1.sendSubscriptions(topics)
+          } else {
+            console.log('peer on connection, but not writable?')
+          }
+        })
+      }
+
+      // sendSubscriptionsOnceReady(peer)
+    })
+
+    // make sure that Gossipsub is already mounted
+    // function sendSubscriptionsOnceReady (peer) {
+    //   if (peer && peer.isWritable) {
+    //     return peer.sendSubscriptions(topics)
+    //   }
+    //   const onConnection = () => {
+    //     // peer.removeListener('connection', onConnection)
+    //     sendSubscriptionsOnceReady(peer)
+    //   }
+    //   peer.once('connection', onConnection)
+    //   // peer.once('close', () => peer.removeListener('connection', onConnection))
+    // }
 
     this.join(newTopics)
   }
